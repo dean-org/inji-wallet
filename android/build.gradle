@@ -27,3 +27,10 @@ buildscript {
 def expoCameraMavenPath = new File(["node", "--print", "require.resolve('expo-camera/package.json')"].execute(null, rootDir).text.trim(), "../android/maven")
 allprojects { repositories { maven { url(expoCameraMavenPath) } } }
 // @generated end expo-camera-import
+allprojects {
+    configurations.all {
+        resolutionStrategy {
+            force "net.lingala.zip4j:zip4j:2.11.7"
+        }
+    }
+}
