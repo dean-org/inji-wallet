@@ -1,5 +1,5 @@
 import {useMachine, useSelector} from '@xstate/react';
-import {useContext, useEffect, useState} from 'react';
+import {useContext, useEffect, useState, useMemo} from 'react';
 import {ActorRefFrom} from 'xstate';
 import {useTranslation} from 'react-i18next';
 import NetInfo from '@react-native-community/netinfo';
@@ -22,11 +22,16 @@ import {
   selectIsLockingVc,
   selectIsRevokingVc,
   selectIsLoggingRevoke,
-  selectVc,
+  selectVc as selectExistingMosipVc,
   ExistingMosipVCItemEvents,
   ExistingMosipVCItemMachine,
   selectRequestBindingOtp,
 } from '../../machines/VCItemMachine/ExistingMosipVCItem/ExistingMosipVCItemMachine';
+import {
+  EsignetMosipVCItemEvents,
+  EsignetMosipVCItemMachine,
+} from '../../machines/VCItemMachine/EsignetMosipVCItem/EsignetMosipVCItemMachine';
+import {selectVerifiableCredential} from '../../machines/VCItemMachine/EsignetMosipVCItem/EsignetMosipVCItemMachine';
 import {selectPasscode} from '../../machines/auth';
 import {biometricsMachine, selectIsSuccess} from '../../machines/biometrics';
 
@@ -45,17 +50,40 @@ export function useViewVcModal({
   const authService = appService.children.get('auth');
   const [, bioSend, bioService] = useMachine(biometricsMachine);
 
+  // Determine if the VC is from Esignet (OpenID4VCI) or ExistingMosip
+  const isEsignetVC = useMemo(() => {
+    try {
+      const state = vcItemActor.getSnapshot();
+      // Check if the machine ID is for OpenID4VCI (Esignet)
+      return state?.machine?.id === 'vc-item-openid4vci';
+    } catch {
+      return false;
+    }
+  }, [vcItemActor]);
+
   const isSuccessBio = useSelector(bioService, selectIsSuccess);
   const isLockingVc = useSelector(vcItemActor, selectIsLockingVc);
   const isRevokingVc = useSelector(vcItemActor, selectIsRevokingVc);
   const isLoggingRevoke = useSelector(vcItemActor, selectIsLoggingRevoke);
-  const vc = useSelector(vcItemActor, selectVc);
+  
+  // Use appropriate selector based on VC type
+  const vc = useSelector(vcItemActor, isEsignetVC 
+    ? (state: any) => ({ 
+        verifiableCredential: state.context.verifiableCredential,
+        id: state.context.vcMetadata?.id,
+        locked: false
+      })
+    : selectExistingMosipVc
+  );
   const otError = useSelector(vcItemActor, selectOtpError);
   const onSuccess = () => {
     bioSend({type: 'SET_IS_AVAILABLE', data: true});
     setError('');
     setReAuthenticating('');
-    vcItemActor.send(ExistingMosipVCItemEvents.LOCK_VC());
+    // LOCK_VC is only available for ExistingMosip VCs
+    if (!isEsignetVC) {
+      vcItemActor.send(ExistingMosipVCItemEvents.LOCK_VC());
+    }
   };
 
   const onError = (value: string) => {
@@ -74,23 +102,37 @@ export function useViewVcModal({
   const netInfoFetch = (otp: string) => {
     NetInfo.fetch().then(state => {
       if (state.isConnected) {
-        vcItemActor.send(ExistingMosipVCItemEvents.INPUT_OTP(otp));
+        // INPUT_OTP is only available for ExistingMosip VCs
+        if (!isEsignetVC) {
+          vcItemActor.send(ExistingMosipVCItemEvents.INPUT_OTP(otp));
+        }
       } else {
-        vcItemActor.send(ExistingMosipVCItemEvents.DISMISS());
+        if (isEsignetVC) {
+          vcItemActor.send(EsignetMosipVCItemEvents.DISMISS());
+        } else {
+          vcItemActor.send(ExistingMosipVCItemEvents.DISMISS());
+        }
         showToast('Request network failed');
       }
     });
   };
 
   useEffect(() => {
-    if (isLockingVc) {
-      showToast(vc.locked ? t('success.locked') : t('success.unlocked'));
-    }
-    if (isRevokingVc) {
-      showToast(t('success.revoked', {vid: vc.id}));
+    // Only show lock/unlock/revoke toasts for Existing Mosip VCs (not Esignet)
+    if (!isEsignetVC) {
+      if (isLockingVc && vc) {
+        showToast(vc.locked ? t('success.locked') : t('success.unlocked'));
+      }
+      if (isRevokingVc && vc) {
+        showToast(t('success.revoked', {vid: vc.id}));
+      }
     }
     if (isLoggingRevoke) {
-      vcItemActor.send(ExistingMosipVCItemEvents.DISMISS());
+      if (isEsignetVC) {
+        vcItemActor.send(EsignetMosipVCItemEvents.DISMISS());
+      } else {
+        vcItemActor.send(ExistingMosipVCItemEvents.DISMISS());
+      }
       onRevokeDelete();
     }
     if (isSuccessBio && reAuthenticating != '') {
@@ -104,11 +146,17 @@ export function useViewVcModal({
     isRevokingVc,
     isLoggingRevoke,
     vc,
+    isEsignetVC,
   ]);
 
   useEffect(() => {
-    vcItemActor.send(ExistingMosipVCItemEvents.REFRESH());
-  }, [isVisible]);
+    // Send appropriate REFRESH event based on VC type
+    if (isEsignetVC) {
+      vcItemActor.send(EsignetMosipVCItemEvents.REFRESH());
+    } else {
+      vcItemActor.send(ExistingMosipVCItemEvents.REFRESH());
+    }
+  }, [isVisible, isEsignetVC]);
   return {
     error,
     message,
@@ -145,42 +193,98 @@ export function useViewVcModal({
     isBindingWarning: useSelector(vcItemActor, selectBindingWarning),
 
     CONFIRM_REVOKE_VC: () => {
-      setRevoking(true);
+      // REVOKE_VC is only available for ExistingMosip VCs
+      if (!isEsignetVC) {
+        setRevoking(true);
+      }
     },
     REVOKE_VC: () => {
-      vcItemActor.send(ExistingMosipVCItemEvents.REVOKE_VC());
+      // REVOKE_VC is only available for ExistingMosip VCs
+      if (!isEsignetVC) {
+        vcItemActor.send(ExistingMosipVCItemEvents.REVOKE_VC());
+      }
       setRevoking(false);
     },
     setReAuthenticating,
     setRevoking,
     onError,
     addtoWallet: () => {
-      vcItemActor.send(ExistingMosipVCItemEvents.ADD_WALLET_BINDING_ID());
+      if (isEsignetVC) {
+        vcItemActor.send(EsignetMosipVCItemEvents.ADD_WALLET_BINDING_ID());
+      } else {
+        vcItemActor.send(ExistingMosipVCItemEvents.ADD_WALLET_BINDING_ID());
+      }
     },
     lockVc: () => {
-      vcItemActor.send(ExistingMosipVCItemEvents.LOCK_VC());
+      // LOCK_VC is only available for ExistingMosip VCs
+      if (!isEsignetVC) {
+        vcItemActor.send(ExistingMosipVCItemEvents.LOCK_VC());
+      }
     },
     inputOtp: (otp: string) => {
-      netInfoFetch(otp);
+      // INPUT_OTP is only available for ExistingMosip VCs
+      if (!isEsignetVC) {
+        netInfoFetch(otp);
+      }
     },
     revokeVc: (otp: string) => {
-      netInfoFetch(otp);
+      // REVOKE_VC is only available for ExistingMosip VCs
+      if (!isEsignetVC) {
+        netInfoFetch(otp);
+      }
     },
-    ADD_WALLET: () =>
-      vcItemActor.send(ExistingMosipVCItemEvents.ADD_WALLET_BINDING_ID()),
+    ADD_WALLET: () => {
+      if (isEsignetVC) {
+        vcItemActor.send(EsignetMosipVCItemEvents.ADD_WALLET_BINDING_ID());
+      } else {
+        vcItemActor.send(ExistingMosipVCItemEvents.ADD_WALLET_BINDING_ID());
+      }
+    },
     onSuccess,
-    DISMISS: () => vcItemActor.send(ExistingMosipVCItemEvents.DISMISS()),
-    LOCK_VC: () => vcItemActor.send(ExistingMosipVCItemEvents.LOCK_VC()),
-    INPUT_OTP: (otp: string) =>
-      vcItemActor.send(ExistingMosipVCItemEvents.INPUT_OTP(otp)),
-    RESEND_OTP: () => vcItemActor.send(ExistingMosipVCItemEvents.RESEND_OTP()),
-    CANCEL: () => vcItemActor.send(ExistingMosipVCItemEvents.CANCEL()),
-    CONFIRM: () => vcItemActor.send(ExistingMosipVCItemEvents.CONFIRM()),
+    DISMISS: () => {
+      if (isEsignetVC) {
+        vcItemActor.send(EsignetMosipVCItemEvents.DISMISS());
+      } else {
+        vcItemActor.send(ExistingMosipVCItemEvents.DISMISS());
+      }
+    },
+    LOCK_VC: () => {
+      // LOCK_VC is only available for ExistingMosip VCs
+      if (!isEsignetVC) {
+        vcItemActor.send(ExistingMosipVCItemEvents.LOCK_VC());
+      }
+    },
+    INPUT_OTP: (otp: string) => {
+      // INPUT_OTP is only available for ExistingMosip VCs
+      if (!isEsignetVC) {
+        vcItemActor.send(ExistingMosipVCItemEvents.INPUT_OTP(otp));
+      }
+    },
+    RESEND_OTP: () => {
+      // RESEND_OTP is only available for ExistingMosip VCs
+      if (!isEsignetVC) {
+        vcItemActor.send(ExistingMosipVCItemEvents.RESEND_OTP());
+      }
+    },
+    CANCEL: () => {
+      if (isEsignetVC) {
+        vcItemActor.send(EsignetMosipVCItemEvents.CANCEL());
+      } else {
+        vcItemActor.send(ExistingMosipVCItemEvents.CANCEL());
+      }
+    },
+    CONFIRM: () => {
+      if (isEsignetVC) {
+        vcItemActor.send(EsignetMosipVCItemEvents.CONFIRM());
+      } else {
+        vcItemActor.send(ExistingMosipVCItemEvents.CONFIRM());
+      }
+    },
   };
 }
 
 export interface ViewVcModalProps extends ModalProps {
-  vcItemActor: ActorRefFrom<typeof ExistingMosipVCItemMachine>;
+  vcItemActor: ActorRefFrom<typeof ExistingMosipVCItemMachine> | ActorRefFrom<typeof EsignetMosipVCItemMachine>;
   onDismiss: () => void;
   onRevokeDelete: () => void;
   activeTab: Number;
