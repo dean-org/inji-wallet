@@ -38,7 +38,7 @@ on:
 
 jobs:
   build-android:
-    uses: mosip/kattu/.github/workflows/android-build.yml@master
+    uses: ./.github/workflows/android-build.yml
     with:
         NODE_VERSION: "16.x"
         JAVA_VERSION: 11
