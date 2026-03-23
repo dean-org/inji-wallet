@@ -397,7 +397,7 @@ export const AddVcModalMachine =
             API_URLS.credentialRequest.buildURL(),
             {
               individualId: context.id,
-              individualIdType: context.displayId,
+              individualIdType: context.idType,
               
               otp: context.otp,
               transactionID: context.transactionId,
