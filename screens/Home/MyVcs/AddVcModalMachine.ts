@@ -410,8 +410,9 @@ export const AddVcModalMachine =
         isEmptyId: ({id}) => id?.trim() === '',
 
         isWrongIdFormat: ({idType, id}) => {
-          const validIdType =
-            idType === 'UIN' ? id.length === 10 : id.length === 16;
+          const validIdType = (idType === 'UIN' || idType === 'UID')
+            ? id.length === 10
+            : id.length === 16;
           return !(/^\d{10,16}$/.test(id) && validIdType);
         },
 
