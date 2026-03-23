@@ -16,7 +16,7 @@ export interface VC {
 
 export type SelectedCredentialsForVPSharing = Record<string,Record<string, Array<any>>;
 
-export type VcIdType = 'UIN' | 'VID';
+export type VcIdType = 'UIN' | 'VID' | 'UID';
 
 export interface DecodedCredential {
   biometrics: {
@@ -32,6 +32,7 @@ export interface CredentialSubject {
   //TODO: This should change to mandatory field if uin is also issued
   UIN?: string;
   VID?: string;
+  UID?: string;
   addressLine1: LocalizedField[] | string;
   city: LocalizedField[] | string;
   dateOfBirth: string;
