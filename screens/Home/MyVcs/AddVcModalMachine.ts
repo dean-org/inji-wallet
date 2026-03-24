@@ -261,21 +261,19 @@ export const AddVcModalMachine =
       actions: {
         forwardToParent: sendParent('DISMISS'),
 
-        setId: model.assign({
-           id: (context, event) => {
-            if (context.idType === 'UID'|| context.idType === 'HANDLE') {
-              return event.id.replace('@uid', '');
+      setId: model.assign({
+          id: (context, event) => {
+            const rawId = event.id; // user input (no @uid)
+            if (context.idType === 'HANDLE') {
+              return `${rawId}@uid`; 
             }
-            return event.id; // ✅ unchanged for UIN / VID
+            return rawId;
           },
         }),
 
         setIdType: model.assign({
-           idType: (_context, event) => {
-            if (event.idType === 'UID') {
-              return 'HANDLE';  
-            }
-            return event.idType;
+          idType: (_context, event) => {
+            return event.idType === 'UID' ? 'HANDLE' : event.idType;
           },
         }),
 
