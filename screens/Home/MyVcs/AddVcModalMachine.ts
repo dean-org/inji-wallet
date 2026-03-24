@@ -375,8 +375,10 @@ export const AddVcModalMachine =
             getInteractEventData('VC Download', 'CLICK', 'Requesting OTP'),
           );
           let individualId = context.id;
+          let individualIdType = context.idType;
           if (context.idType === 'UID') {
             individualId = `${context.id}@uid`;
+            individualIdType = 'HANDLE'
           }
         try {
               const response = await request(
@@ -385,6 +387,7 @@ export const AddVcModalMachine =
                 {
                   id: 'mosip.identity.otp.internal',
                   individualId: individualId,
+                  individualIdType: individualIdType,
                   metadata: {},
                   otpChannel: ['EMAIL'],
                   requestTime: String(new Date().toISOString()),
@@ -419,7 +422,7 @@ export const AddVcModalMachine =
           let individualIdType = context.idType;
           if (context.idType === 'UID'||context.idType === 'HANDLE') {
             individualId = `${context.id}@uid`;
-            // individualIdType = 'HANDLE';
+            individualIdType = 'HANDLE';
           }
           const response = await request(
             API_URLS.credentialRequest.method,
