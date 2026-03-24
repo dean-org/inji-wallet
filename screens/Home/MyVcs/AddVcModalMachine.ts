@@ -410,8 +410,7 @@ export const AddVcModalMachine =
           
               throw error; // real error
             }
-          }
-        },
+          },
 
         requestCredential: async context => {
           // force wait to fix issue with hanging overlay
