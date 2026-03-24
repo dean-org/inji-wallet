@@ -262,11 +262,21 @@ export const AddVcModalMachine =
         forwardToParent: sendParent('DISMISS'),
 
         setId: model.assign({
-          id: (_context, event) => event.id,
+           id: (context, event) => {
+            if (context.idType === 'UID'|| context.idType === 'HANDLE') {
+              return event.id.replace('@uid', '');
+            }
+            return event.id; // ✅ unchanged for UIN / VID
+          },
         }),
 
         setIdType: model.assign({
-          idType: (_context, event) => event.idType,
+           idType: (_context, event) => {
+            if (event.idType === 'UID') {
+              return 'HANDLE';  
+            }
+            return event.idType;
+          },
         }),
 
         setOtp: model.assign({
@@ -384,7 +394,7 @@ export const AddVcModalMachine =
                 API_URLS.requestOtp.buildURL(),
                 {
                   id: 'mosip.identity.otp.internal',
-                  individualId: individualId,
+                  individualId: context.id,
                   metadata: {},
                   otpChannel: ['EMAIL'],
                   requestTime: String(new Date().toISOString()),
@@ -425,8 +435,8 @@ export const AddVcModalMachine =
             API_URLS.credentialRequest.method,
             API_URLS.credentialRequest.buildURL(),
             {
-              individualId: individualId,
-              individualIdType: individualIdType,
+              individualId: context.id,
+              individualIdType: context.idType,
               
               otp: context.otp,
               transactionID: context.transactionId,
