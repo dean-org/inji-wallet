@@ -374,12 +374,16 @@ export const AddVcModalMachine =
           sendInteractEvent(
             getInteractEventData('VC Download', 'CLICK', 'Requesting OTP'),
           );
+          let individualId = context.id;
+          if (context.idType === 'UID') {
+            individualId = `${context.id}@uid`;
+          }
           return request(
             API_URLS.requestOtp.method,
             API_URLS.requestOtp.buildURL(),
             {
               id: 'mosip.identity.otp.internal',
-              individualId: context.id,
+              individualId: individualId,
               metadata: {},
               otpChannel: ['EMAIL'],
               requestTime: String(new Date().toISOString()),
@@ -392,12 +396,18 @@ export const AddVcModalMachine =
         requestCredential: async context => {
           // force wait to fix issue with hanging overlay
           await new Promise(resolve => setTimeout(resolve, 1000));
+          let individualId = context.id;
+          let individualIdType = context.idType;
+          if (context.idType === 'UID') {
+            individualId = `${context.id}@uid`;
+            individualIdType = 'HANDLE';
+          }
           const response = await request(
             API_URLS.credentialRequest.method,
             API_URLS.credentialRequest.buildURL(),
             {
-              individualId: context.id,
-              individualIdType: context.idType,
+              individualId: individualId,
+              individualIdType: individualIdType,
               
               otp: context.otp,
               transactionID: context.transactionId,
