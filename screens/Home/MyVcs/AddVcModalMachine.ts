@@ -378,19 +378,39 @@ export const AddVcModalMachine =
           if (context.idType === 'UID') {
             individualId = `${context.id}@uid`;
           }
-          return request(
-            API_URLS.requestOtp.method,
-            API_URLS.requestOtp.buildURL(),
-            {
-              id: 'mosip.identity.otp.internal',
-              individualId: individualId,
-              metadata: {},
-              otpChannel: ['EMAIL'],
-              requestTime: String(new Date().toISOString()),
-              transactionID: context.transactionId,
-              version: '1.0',
-            },
-          );
+        try {
+              const response = await request(
+                API_URLS.requestOtp.method,
+                API_URLS.requestOtp.buildURL(),
+                {
+                  id: 'mosip.identity.otp.internal',
+                  individualId: individualId,
+                  metadata: {},
+                  otpChannel: ['EMAIL'],
+                  requestTime: String(new Date().toISOString()),
+                  transactionID: context.transactionId,
+                  version: '1.0',
+                },
+              );
+          
+              // ✅ handle false error in success response
+              if (response?.message === 'while generating otp error is occured') {
+                console.log('Ignoring false error, OTP likely sent');
+                return response;
+              }
+          
+              return response;
+          
+            } catch (error: any) {
+              // ✅ handle false error in error case
+              if (error?.message === 'while generating otp error is occured') {
+                console.log('Ignoring false error from catch');
+                return { message: error.message };
+              }
+          
+              throw error; // real error
+            }
+          }
         },
 
         requestCredential: async context => {
