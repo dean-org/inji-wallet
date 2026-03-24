@@ -419,7 +419,7 @@ export const AddVcModalMachine =
           let individualIdType = context.idType;
           if (context.idType === 'UID'||context.idType === 'HANDLE') {
             individualId = `${context.id}@uid`;
-            individualIdType = 'HANDLE';
+            // individualIdType = 'HANDLE';
           }
           const response = await request(
             API_URLS.credentialRequest.method,
