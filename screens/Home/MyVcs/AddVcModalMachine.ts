@@ -401,7 +401,7 @@ export const AddVcModalMachine =
           
               return response;
           
-            } catch (error: any) {
+            } catch (error) {
               // ✅ handle false error in error case
               if (error?.message === 'while generating otp error is occured') {
                 console.log('Ignoring false error from catch');
