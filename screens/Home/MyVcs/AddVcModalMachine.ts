@@ -253,11 +253,12 @@ export const AddVcModalMachine =
         },
         done: {
           type: 'final',
-          data: context => new VCMetadata(...context,
-          id: context.idType === 'UID' ? `${context.id}@uid` : context.id,
-          idType: context.idType === 'UID' ? 'HANDLE' : context.idType,
-        }),
-        },
+          data: context => new VCMetadata({
+            ...context,
+            id: context.idType === 'UID' ? `${context.id}@uid` : context.id,
+            idType: context.idType === 'UID' ? 'HANDLE' : context.idType,
+          }),
+        }, 
       },
     },
     {
