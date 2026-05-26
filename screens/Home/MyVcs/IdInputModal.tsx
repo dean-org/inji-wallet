@@ -67,7 +67,6 @@ export const IdInputModal: React.FC<IdInputModalProps> = props => {
                 style={Theme.Styles.picker}>
                 <Picker.Item label="UIN" value="UIN" />
                 <Picker.Item label="VID" value="VID" />
-                <Picker.Item label="UID" value="UID" />
               </Picker>
             </Column>
             <Column
@@ -89,7 +88,7 @@ export const IdInputModal: React.FC<IdInputModalProps> = props => {
                 }}
                 selectionColor={Theme.Colors.Cursor}
                 value={controller.id}
-                keyboardType={controller.idType === 'UID' ? 'default' : 'number-pad'}
+                keyboardType="number-pad"
                 rightIcon={
                   <CustomTooltip
                     testID="IdInputToolTip"
@@ -131,7 +130,7 @@ export const IdInputModal: React.FC<IdInputModalProps> = props => {
                 color={Theme.Colors.getVidColor}
                 weight="semibold"
                 size="small">
-                {t('noUIN/VID/UID')}
+                {t('noUIN/VID')}
               </Text>
               <TouchableOpacity activeOpacity={1} onPress={props.onPress}>
                 <Text
