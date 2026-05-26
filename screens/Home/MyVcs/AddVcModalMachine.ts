@@ -253,24 +253,20 @@ export const AddVcModalMachine =
         },
         done: {
           type: 'final',
-          data: context => new VCMetadata({
-            ...context,
-            id: context.idType === 'UID' ? `${context.id}@uid` : context.id,
-            idType: context.idType === 'UID' ? 'HANDLE' : context.idType,
-          }),
-        }, 
+          data: context => new VCMetadata(context),
+        },
       },
     },
     {
       actions: {
         forwardToParent: sendParent('DISMISS'),
 
-      setId: model.assign({
+        setId: model.assign({
           id: (_context, event) => event.id,
         }),
 
         setIdType: model.assign({
-             idType: (_context, event) => event.idType,
+          idType: (_context, event) => event.idType,
         }),
 
         setOtp: model.assign({
@@ -378,44 +374,30 @@ export const AddVcModalMachine =
           sendInteractEvent(
             getInteractEventData('VC Download', 'CLICK', 'Requesting OTP'),
           );
-          let individualId = context.id;
-          let individualIdType = context.idType;
-          if (context.idType === 'UID') {
-            individualId = `${context.id}@uid`;
-            individualIdType = 'HANDLE'
-          }
-            return request(
+          return request(
             API_URLS.requestOtp.method,
             API_URLS.requestOtp.buildURL(),
             {
               id: 'mosip.identity.otp.internal',
-              individualId: individualId,
-              individualIdType: individualIdType,
+              individualId: context.id,
               metadata: {},
-              otpChannel: ['EMAIL'],
+              otpChannel: ['PHONE', 'EMAIL'],
               requestTime: String(new Date().toISOString()),
               transactionID: context.transactionId,
               version: '1.0',
             },
           );
-          },
+        },
 
         requestCredential: async context => {
           // force wait to fix issue with hanging overlay
           await new Promise(resolve => setTimeout(resolve, 1000));
-          let individualId = context.id;
-          let individualIdType = context.idType;
-          if (context.idType === 'UID'||context.idType === 'HANDLE') {
-            individualId = `${context.id}@uid`;
-            individualIdType = 'HANDLE';
-          }
           const response = await request(
             API_URLS.credentialRequest.method,
             API_URLS.credentialRequest.buildURL(),
             {
-              individualId: individualId,
-              individualIdType: individualIdType,
-              
+              individualId: context.id,
+              individualIdType: context.idType,
               otp: context.otp,
               transactionID: context.transactionId,
             },
@@ -428,9 +410,8 @@ export const AddVcModalMachine =
         isEmptyId: ({id}) => id?.trim() === '',
 
         isWrongIdFormat: ({idType, id}) => {
-          const validIdType = (idType === 'UIN' || idType === 'UID')
-            ? id.length === 10
-            : id.length === 16;
+          const validIdType =
+            idType === 'UIN' ? id.length === 10 : id.length === 16;
           return !(/^\d{10,16}$/.test(id) && validIdType);
         },
 
