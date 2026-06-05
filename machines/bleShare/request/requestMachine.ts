@@ -39,6 +39,7 @@ import {TelemetryConstants} from '../../../shared/telemetry/TelemetryConstants';
 
 import {EventTypes, VerificationStatus, verifier} from '../../../shared/tuvali';
 import {VCActivityLog} from '../../../components/ActivityLogEvent';
+import {normalizeOpenId4VpBleUri} from '../../../shared/openIdBLE/uri';
 
 const model = createModel(
   {
@@ -517,7 +518,7 @@ export const requestMachine =
 
         setOpenID4VpUri: assign({
           openId4VpUri: (_context, event) => {
-            return event.openId4VpUri;
+            return normalizeOpenId4VpBleUri(event.openId4VpUri);
           },
         }),
 

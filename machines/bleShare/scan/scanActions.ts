@@ -31,6 +31,7 @@ import {NativeModules} from 'react-native';
 import {wallet} from '../../../shared/tuvali';
 import {createOpenID4VPMachine} from '../../openID4VP/openID4VPMachine';
 import {VCActivityLog} from '../../../components/ActivityLogEvent';
+import {normalizeOpenId4VpBleUri} from '../../../shared/openIdBLE/uri';
 
 const QR_LOGIN_REF_ID = 'QrLogin';
 const OPENID4VP_REF_ID = 'OpenID4VP';
@@ -122,7 +123,7 @@ export const ScanActions = (model: any) => {
     },
 
     setUri: model.assign({
-      openId4VpUri: (_context, event) => event.params,
+      openId4VpUri: (_context, event) => normalizeOpenId4VpBleUri(event.params),
     }),
 
     clearUri: assign({

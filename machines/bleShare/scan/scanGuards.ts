@@ -1,5 +1,6 @@
 import {VCShareFlowType} from '../../../shared/Utils';
 import {androidVersion, isAndroid, isIOS} from '../../../shared/constants';
+import {isOpenId4VpBleUri} from '../../../shared/openIdBLE/uri';
 
 export const ScanGuards = () => {
   return {
@@ -8,7 +9,7 @@ export const ScanGuards = () => {
     },
 
     // sample: 'OPENID4VP://connect:?name=OVPMOSIP&key=69dc92a2cc91f02258aa8094d6e2b62877f5b6498924fbaedaaa46af30abb364'
-    isOpenIdQr: (_context, event) => event.params.startsWith('OPENID4VP://'),
+    isOpenIdQr: (_context, event) => isOpenId4VpBleUri(event.params),
     // sample: 'INJIQUICKSHARE://NAKDFK:DB:JAHDIHAIDJXKABDAJDHUHW'
     isQuickShare: (_context, event) =>
       // event.params.startsWith(DEFAULT_QR_HEADER),
